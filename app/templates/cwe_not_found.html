@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Không tìm thấy CWE</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Thêm CSS nếu cần -->
+</head>
+<body>
+    <div class="container">
+        <h1>Lỗi: Không tìm thấy CWE</h1>
+        <p>Không tìm thấy thông tin cho CWE ID: <strong>{{ cwe_id }}</strong>.</p>
+        <p><a href="{{ url_for('main.cwe_list') }}">Xem danh sách CWE</a> | <a href="{{ url_for('main.index') }}">Quay lại trang chủ</a></p>
+    </div>
+</body>
+</html>

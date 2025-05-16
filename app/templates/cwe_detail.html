@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Chi tiết {{ cwe_id }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+     <style>
+        /* CSS tương tự index.html */
+        body { font-family: sans-serif; margin: 20px; background-color: #f4f4f4; }
+        .container { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h1, h2, h3, h4 { color: #333; }
+        p, li { line-height: 1.6; }
+        a { color: #007bff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .severity-cao { color: red; font-weight: bold; }
+        .exploitation-list, .remediation-list { padding-left: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>{{ cwe_id }}: {{ cwe_info.name }}</h1>
+        <p><a href="{{ url_for('main.cwe_list') }}">Danh sách CWE</a> | <a href="{{ url_for('main.index') }}">Trang chủ</a></p>
+        
+        {% if cwe_info.severity %}
+            <p><strong>Mức độ nguy hiểm:</strong> <span class="severity-{{ cwe_info.severity.lower() }}">{{ cwe_info.severity }}</span></p>
+        {% endif %}
+
+        <h2>Mô tả</h2>
+        <p>{{ cwe_info.description }}</p>
+
+        {% if cwe_info.exploitation %}
+        <h2>Cách khai thác phổ biến</h2>
+        <ul class="exploitation-list">
+            {% for item in cwe_info.exploitation %}
+            <li>{{ item }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+
+        {% if cwe_info.remediation %}
+        <h2>Cách khắc phục gợi ý</h2>
+        <ul class="remediation-list">
+            {% for item in cwe_info.remediation %}
+            <li>{{ item }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+</body>
+</html>

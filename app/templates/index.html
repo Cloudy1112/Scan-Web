@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Vulnerability Scanner</title>
+    <!-- Link đến file CSS tĩnh nếu bạn muốn tách CSS ra -->
+    <!-- <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"> -->
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background-color: #f0f2f5; 
+            color: #333;
+            line-height: 1.6;
+        }
+        .container { 
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: #fff; 
+            padding: 25px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1); 
+        }
+        h1, h2, h3, h4 { 
+            color: #1d2129; 
+            margin-top: 0;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 2em;
+        }
+        h2 {
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 10px;
+            margin-top: 30px;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+        nav {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        nav a {
+            margin: 0 10px;
+            color: #007bff;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        nav a:hover {
+            text-decoration: underline;
+        }
+        label { 
+            display: block; 
+            margin-top: 15px; 
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        input[type="text"], 
+        input[type="number"] { 
+            width: calc(100% - 20px); 
+            padding: 10px; 
+            border: 1px solid #ccd0d5; 
+            border-radius: 6px; 
+            font-size: 1em;
+        }
+        input[type="checkbox"] { 
+            margin-right: 8px; 
+            vertical-align: middle;
+        }
+        .checkbox-label {
+            display: inline-flex; /* Để label và checkbox trên cùng hàng */
+            align-items: center; /* Căn giữa theo chiều dọc */
+            font-weight: normal; /* Bỏ bold cho label của checkbox */
+            margin-top: 10px;
+        }
+        button[type="submit"], .export-button { 
+            background-color: #007bff; 
+            color: white; 
+            padding: 12px 20px; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            margin-top: 25px; 
+            font-size: 1em;
+            font-weight: 500;
+            transition: background-color 0.2s ease-in-out;
+        }
+        button[type="submit"]:hover, .export-button:hover { 
+            background-color: #0056b3; 
+        }
+        .results { 
+            margin-top: 30px; 
+            padding-top: 20px; 
+        }
+        .finding { 
+            border: 1px solid #e9ecef; 
+            padding: 20px; 
+            margin-bottom: 20px; 
+            border-radius: 6px; 
+            background-color: #f8f9fa; 
+        }
+        .finding h3 { 
+            margin-top: 0; 
+            color: #dc3545; /* Màu đỏ đậm hơn cho tên lỗi */
+            font-size: 1.25em;
+            border-bottom: 1px dashed #ddd;
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+        }
+        .finding p { 
+            margin: 8px 0; 
+        }
+        .finding strong {
+            color: #495057;
+        }
+        code { 
+            background-color: #e9ecef; 
+            padding: 3px 6px; 
+            border-radius: 4px; 
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+            color: #c7254e; /* Màu cho code */
+        }
+        .error-message { 
+            color: #721c24; 
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 15px;
+            border-radius: 6px;
+            font-weight: bold; 
+        }
+        .scan-info { 
+            margin-bottom: 25px; 
+            padding: 15px;
+            background-color: #e9f7fd;
+            border-left: 5px solid #007bff;
+            color: #004085;
+        }
+        .scan-info p { margin: 5px 0; }
+        .severity-cao { color: #dc3545; font-weight: bold; }
+        .severity-trung { color: #ffc107; font-weight: bold; } /* Sửa thành "trung" cho CSS class */
+        .severity-thấp { color: #28a745; font-weight: bold; }
+        .history-view-notice {
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+            color: #856404;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 6px;
+        }
+        .remediation-list, .exploitation-list {
+            padding-left: 20px;
+        }
+        .remediation-list li, .exploitation-list li {
+            margin-bottom: 5px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .options-group {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            background-color: #f8f9fa;
+        }
+        .options-group h2 {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Web Vulnerability Scanner</h1>
+
+        <nav>
+            <a href="{{ url_for('main.index') }}">Trang chủ</a> |
+            <a href="{{ url_for('main.cwe_list') }}">Tra cứu CWE</a> |
+            <a href="{{ url_for('main.scan_history_list') }}">Lịch sử Quét</a>
+        </nav>
+
+        {% if is_history_view %}
+            <div class="history-view-notice">
+                <p><strong>Đang xem lại kết quả từ lịch sử.</strong></p>
+                {% if results.scan_timestamp_from_history %}
+                <p>Quét vào lúc: {{ results.scan_timestamp_from_history }}</p>
+                {% endif %}
+                <p><a href="{{ url_for('main.scan_history_list') }}">Quay lại danh sách lịch sử</a></p>
+            </div>
+        {% endif %}
+        
+        {% if not is_history_view %} <!-- Chỉ hiển thị form nếu không phải xem lịch sử -->
+        <form method="POST">
+            <div class="form-group">
+                <label for="target_url">URL Mục tiêu:</label>
+                <input type="text" id="target_url" name="target_url" value="{{ submitted_url or '' }}" placeholder="Ví dụ: http://example.com/page?id=1" required>
+            </div>
+            
+            <div class="options-group">
+                <h2>Tùy chọn Crawling</h2>
+                <div class="form-group">
+                    <label for="enable_crawl" class="checkbox-label">
+                        <input type="checkbox" id="enable_crawl" name="enable_crawl" {% if request.form.enable_crawl %}checked{% endif %}>
+                        Bật Crawling (Khám phá thêm URL trên cùng domain)
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label for="max_crawl_urls">Số URL tối đa để quét khi crawl:</label>
+                    <input type="number" id="max_crawl_urls" name="max_crawl_urls" value="{{ request.form.max_crawl_urls or 5 }}" min="1">
+                </div>
+            </div>
+
+            <div class="options-group">
+                <h2>Tùy chọn Loại Lỗ hổng</h2>
+                <div class="form-group">
+                    <label for="skip_sqli" class="checkbox-label">
+                        <input type="checkbox" id="skip_sqli" name="skip_sqli" {% if request.form.skip_sqli %}checked{% endif %}>
+                        Bỏ qua SQL Injection
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label for="skip_xss" class="checkbox-label">
+                        <input type="checkbox" id="skip_xss" name="skip_xss" {% if request.form.skip_xss %}checked{% endif %}>
+                        Bỏ qua Cross-Site Scripting (XSS)
+                    </label>
+                </div>
+            </div>
+            
+            <button type="submit">Bắt đầu Quét</button>
+        </form>
+        {% endif %}
+
+
+        {% if results %}
+        <div class="results">
+            <h2>Kết quả Quét</h2>
+            {% if results.error %}
+                <p class="error-message">{{ results.error }}</p>
+            {% elif results.message and not results.findings %} <!-- Thêm trường hợp có message nhưng không có findings -->
+                <p class="scan-info">{{ results.message }}</p>
+            {% else %}
+                <div class="scan-info">
+                    <p><strong>URL ban đầu được kiểm tra:</strong> {{ results.initial_url }}</p>
+                    {% if results.scanned_urls and results.scanned_urls|length > 1 or (results.scanned_urls and results.scanned_urls[0] != results.initial_url) %}
+                        <p><strong>Các URL đã quét (bao gồm cả URL được crawl nếu có):</strong></p>
+                        <ul>
+                            {% for scanned_url in results.scanned_urls %}
+                                <li>{{ scanned_url }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% elif results.scanned_urls and results.scanned_urls|length == 1 and results.scanned_urls[0] == results.initial_url %}
+                         <p><strong>URL đã quét:</strong> {{ results.scanned_urls[0] }}</p>
+                    {% endif %}
+                </div>
+
+                {% if results.findings %}
+                    {% if not is_history_view %} <!-- Nút export chỉ hiển thị khi không phải xem lịch sử -->
+                    <div style="margin-bottom: 20px;">
+                        <button class="export-button" onclick="exportReportHTML()">Xuất Báo cáo HTML</button>
+                    </div>
+                    {% endif %}
+                    {% for finding in results.findings %}
+                    <div class="finding">
+                        <h3>{{ finding.error_name or 'Lỗi không xác định' }} ({{ finding.vulnerability_type or 'N/A' }})</h3>
+                        <p><strong>URL:</strong> <a href="{{ finding.vulnerable_url }}" target="_blank">{{ finding.vulnerable_url }}</a></p>
+                        <p><strong>Tham số:</strong> {{ finding.parameter }}</p>
+                        <p><strong>Payload đã sử dụng:</strong> <code>{{ finding.payload_used }}</code></p>
+                        {% if finding.injected_payload_full and finding.injected_payload_full != finding.payload_used %}
+                            <p><strong>Payload đầy đủ đã chèn:</strong> <code>{{ finding.injected_payload_full }}</code></p>
+                        {% endif %}
+                        <p><strong>Phương pháp phát hiện:</strong> {{ finding.detection_method }}</p>
+                        <p><strong>Bằng chứng/Chi tiết:</strong> {{ finding.evidence }}</p>
+                        <p><strong>CWE:</strong> <a href="{{ url_for('main.cwe_detail', cwe_id=finding.cwe) }}" target="_blank">{{ finding.cwe }}</a></p>
+                        
+                        {% set cwe_info = get_cwe_details_for_template(finding.cwe) %}
+                        {% if cwe_info and cwe_info.severity %}
+                            <p><strong>Mức độ nguy hiểm:</strong> <span class="severity-{{ cwe_info.severity.lower().replace(' ', '-') }}">{{ cwe_info.severity }}</span></p>
+                        {% endif %}
+                        <p><strong>OWASP:</strong> {{ finding.owasp_category }}</p>
+                        
+                        {% if cwe_info %}
+                            <h4>Mô tả {{finding.cwe}}:</h4>
+                            <p>{{ cwe_info.description }}</p>
+                            <h4>Gợi ý khắc phục:</h4>
+                            <ul class="remediation-list">
+                                {% for step in cwe_info.remediation %}
+                                <li>{{ step }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p><em>(Không tìm thấy thông tin chi tiết cho {{finding.cwe}} trong dữ liệu hiện tại)</em></p>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p>Không tìm thấy lỗ hổng nào với cấu hình và URL đã quét.</p>
+                {% endif %}
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        function exportReportHTML() {
+            // Clone the results div to avoid modifying the live page
+            const resultsNode = document.querySelector('.results');
+            if (!resultsNode) {
+                alert("Không có kết quả để xuất!");
+                return;
+            }
+            const reportContentClone = resultsNode.cloneNode(true);
+
+            // Remove export button from cloned content
+            const exportButtonInClone = reportContentClone.querySelector('.export-button');
+            if (exportButtonInClone) {
+                exportButtonInClone.parentElement.remove(); // Remove the div containing the button
+            }
+            
+            const reportContent = reportContentClone.innerHTML;
+            const timestamp = new Date().toISOString().replace(/:/g, '-').slice(0, 19);
+            const filename = `Vulnerability_Report_${timestamp}.html`;
+            
+            // Lấy URL đã submit để thêm vào báo cáo
+            const submittedUrlElement = document.getElementById('target_url');
+            const submittedUrl = submittedUrlElement ? submittedUrlElement.value : 'N/A';
+            
+            let reportHTML = `
+                <!DOCTYPE html>
+                <html lang="vi">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Báo cáo Lỗ hổng - ${new Date().toLocaleString('vi-VN')}</title>
+                    <style>
+                        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 20px; background-color: #f0f2f5; color: #333; line-height: 1.6; }
+                        .container { max-width: 900px; margin: 0 auto; background-color: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 2px 15px rgba(0,0,0,0.1); }
+                        h1, h2, h3, h4 { color: #1d2129; margin-top: 0; }
+                        h1 { text-align: center; margin-bottom: 25px; font-size: 2em; }
+                        h2 { border-bottom: 2px solid #e9ecef; padding-bottom: 10px; margin-top: 30px; margin-bottom: 20px; font-size: 1.5em; }
+                        .finding { border: 1px solid #e9ecef; padding: 20px; margin-bottom: 20px; border-radius: 6px; background-color: #f8f9fa; }
+                        .finding h3 { margin-top: 0; color: #dc3545; font-size: 1.25em; border-bottom: 1px dashed #ddd; padding-bottom: 8px; margin-bottom: 15px; }
+                        .finding p { margin: 8px 0; }
+                        .finding strong { color: #495057; }
+                        code { background-color: #e9ecef; padding: 3px 6px; border-radius: 4px; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace; color: #c7254e; }
+                        .severity-cao { color: #dc3545; font-weight: bold; }
+                        .severity-trung { color: #ffc107; font-weight: bold; }
+                        .severity-thấp { color: #28a745; font-weight: bold; }
+                        .scan-info { margin-bottom: 25px; padding: 15px; background-color: #e9f7fd; border-left: 5px solid #007bff; color: #004085;}
+                        .scan-info p { margin: 5px 0; }
+                        .remediation-list, .exploitation-list { padding-left: 20px; }
+                        .remediation-list li, .exploitation-list li { margin-bottom: 5px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <h1>Báo cáo Quét Lỗ hổng</h1>
+                        <p><strong>Ngày xuất báo cáo:</strong> ${new Date().toLocaleString('vi-VN')}</p>
+                        <p><strong>URL Mục tiêu ban đầu:</strong> ${submittedUrl}</p>
+                        <hr>
+                        ${reportContent}
+                    </div>
+                </body>
+                </html>
+            `;
+            
+            const blob = new Blob([reportHTML], { type: 'text/html;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href); // Giải phóng bộ nhớ
+        }
+    </script>
+</body>
+</html>

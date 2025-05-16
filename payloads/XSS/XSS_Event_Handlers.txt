@@ -1,0 +1,3 @@
+<b onmouseover=alert(1)>HoverMe</b>
+<input type=text value="XSS" onfocus=alert(1) autofocus>
+<a href="javascript:alert(1)">ClickMe</a>

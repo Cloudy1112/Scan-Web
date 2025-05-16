@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Danh sách CWE</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        /* CSS tương tự index.html */
+        body { font-family: sans-serif; margin: 20px; background-color: #f4f4f4; }
+        .container { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h1 { color: #333; }
+        ul { list-style-type: none; padding: 0; }
+        li { margin-bottom: 10px; }
+        a { color: #007bff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Danh sách Common Weakness Enumeration (CWE)</h1>
+        <p><a href="{{ url_for('main.index') }}">Quay lại trang chủ</a></p>
+        {% if cwe_summary %}
+            <ul>
+            {% for cwe_id, name in cwe_summary.items() %}
+                <li><a href="{{ url_for('main.cwe_detail', cwe_id=cwe_id) }}">{{ cwe_id }}: {{ name }}</a></li>
+            {% endfor %}
+            </ul>
+        {% else %}
+            <p>Không có dữ liệu CWE nào.</p>
+        {% endif %}
+    </div>
+</body>
+</html>

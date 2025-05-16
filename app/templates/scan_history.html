@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Lịch sử Quét</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Thêm CSS nếu cần -->
+    <style>
+        body { font-family: sans-serif; margin: 20px; background-color: #f4f4f4; }
+        .container { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h1 { color: #333; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f0f0f0; }
+        a { color: #007bff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .pagination { margin-top: 20px; }
+        .pagination a { margin: 0 5px; padding: 5px 10px; border: 1px solid #ddd; text-decoration: none; color: #007bff; }
+        .pagination span.current { margin: 0 5px; padding: 5px 10px; border: 1px solid #007bff; background-color: #007bff; color: white; }
+        .pagination span.disabled { margin: 0 5px; padding: 5px 10px; border: 1px solid #eee; color: #aaa; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Lịch sử Quét Lỗ hổng</h1>
+        <p><a href="{{ url_for('main.index') }}">Quay lại trang chủ</a></p>
+
+        {% if history_entries.items %}
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>URL Mục tiêu</th>
+                    <th>Thời gian Quét</th>
+                    <th>Số lỗi tìm thấy</th>
+                    <th>Chi tiết</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in history_entries.items %}
+                <tr>
+                    <td>{{ entry.id }}</td>
+                    <td>{{ entry.target_url }}</td>
+                    <td>{{ entry.scan_timestamp.strftime('%Y-%m-%d %H:%M:%S UTC') }}</td>
+                    <td>{{ entry.num_findings }}</td>
+                    <td><a href="{{ url_for('main.scan_history_detail', scan_id=entry.id) }}">Xem chi tiết</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="pagination">
+            {% if history_entries.has_prev %}
+                <a href="{{ url_for('main.scan_history_list', page=history_entries.prev_num) }}">« Trang trước</a>
+            {% else %}
+                <span class="disabled">« Trang trước</span>
+            {% endif %}
+            
+            {% for p_num in history_entries.iter_pages() %}
+                {% if p_num %}
+                    {% if p_num != history_entries.page %}
+                        <a href="{{ url_for('main.scan_history_list', page=p_num) }}">{{ p_num }}</a>
+                    {% else %}
+                        <span class="current">{{ p_num }}</span>
+                    {% endif %}
+                {% else %}
+                    <span class="disabled">...</span>
+                {% endif %}
+            {% endfor %}
+
+            {% if history_entries.has_next %}
+                <a href="{{ url_for('main.scan_history_list', page=history_entries.next_num) }}">Trang sau »</a>
+            {% else %}
+                <span class="disabled">Trang sau »</span>
+            {% endif %}
+        </div>
+        {% else %}
+        <p>Chưa có lịch sử quét nào.</p>
+        {% endif %}
+    </div>
+</body>
+</html>
