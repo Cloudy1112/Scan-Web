@@ -141,50 +141,124 @@ class WebScannerService:
         return list(urls_to_scan)
 
 
-    def _scan_single_url_job(self, target_url, payloads_sqli, payloads_xss, session_for_thread, thread_id="N/A"):
         # Đổi tên từ scan_single_url_with_params để rõ ràng đây là job cho luồng
         # Logic của hàm này giữ nguyên như scan_single_url_with_params trước đó, chỉ thay đổi print
         # và đảm bảo nó là một phương thức của class (có self)
-        # ...
-        # print(f"  [ServiceScanJob-{thread_id}] Bắt đầu quét: {target_url}") # Ít print hơn
+    def _scan_single_url_job(self, target_url, payloads_sqli, payloads_xss, session_for_thread, thread_id="N/A"):
+        # print(f"  [ServiceScanJob-{thread_id}] Bắt đầu quét: {target_url}")
         parsed_url = urlparse(target_url)
         original_query_params = parse_qs(parsed_url.query, keep_blank_values=True)
-        if not original_query_params: return []
+        
+        if not original_query_params:
+            # print(f"  [ServiceScanJob-{thread_id}] URL không có tham số: {target_url}")
+            return []
 
         job_findings = []
-        baseline_response_time = 0.5
+        baseline_response_time = 0.5 # Mặc định
         try:
             headers_baseline = {'User-Agent': f'Mozilla/5.0 VulnScanner/1.1 BaselineCheck (Job-{thread_id})'}
             test_responses_times = []
-            for _ in range(1):
-                r_start = time.time()
-                session_for_thread.get(target_url, timeout=7, verify=False, headers=headers_baseline)
-                test_responses_times.append(time.time() - r_start)
-            if test_responses_times: baseline_response_time = sum(test_responses_times) / len(test_responses_times)
-        except requests.exceptions.RequestException: pass
+            # Chỉ lấy baseline một lần để tiết kiệm thời gian cho mỗi job
+            r_start = time.time()
+            session_for_thread.get(target_url, timeout=7, verify=False, headers=headers_baseline)
+            test_responses_times.append(time.time() - r_start)
+            if test_responses_times:
+                baseline_response_time = sum(test_responses_times) / len(test_responses_times)
+            # print(f"    [DEBUG Job-{thread_id}] Baseline time for {target_url}: {baseline_response_time:.2f}s")
+        except requests.exceptions.RequestException:
+            # print(f"    [WARN Job-{thread_id}] Could not get baseline for {target_url}")
+            pass # Tiếp tục với baseline mặc định
 
         for param_name, param_values in original_query_params.items():
-            original_value = param_values[0] if param_values and param_values[0] else "testVal123"
-            
+            original_value = param_values[0] if param_values and param_values[0] else "testDefault123"
+            # print(f"    [DEBUG Job-{thread_id}] Scanning Param: '{param_name}' with original value: '{original_value}' in URL: {target_url}")
+
+            # --- Quét SQLi ---
             if payloads_sqli:
+                # print(f"        [DEBUG Job-{thread_id}] Initiating SQLi scan for param '{param_name}'")
                 for payload_file_key, sqli_payload_list in payloads_sqli.items():
+                    # print(f"            [DEBUG Job-{thread_id}] Using SQLi payloads from: {payload_file_key}")
                     for payload in sqli_payload_list:
-                        # ... (logic gửi request SQLi và check_for_sqli) ...
-                        # job_findings.append(finding_data)
-                        # print(f"    [+] SQLi tìm thấy (Job-{thread_id}): {vuln_url_sqli} ...")
-                        pass # Placeholder for actual SQLi scan logic copied from previous version
+                        test_params_sqli = original_query_params.copy()
+                        injected_value_sqli = original_value + payload 
+                        test_params_sqli[param_name] = [injected_value_sqli]
+                        modified_query_sqli = urlencode(test_params_sqli, doseq=True)
+                        vuln_url_sqli = parsed_url._replace(query=modified_query_sqli).geturl()
+                        
+                        # print(f"                [DEBUG Job-{thread_id}] SQLi Test URL: {vuln_url_sqli}")
+                        try:
+                            headers_sqli = {'User-Agent': f'Mozilla/5.0 VulnScanner/1.1 SQLiTest (Job-{thread_id})'}
+                            start_req_time = time.time()
+                            req_timeout = 15 if is_sqli_time_based_payload(payload) else 10
+                            
+                            response_sqli = session_for_thread.get(vuln_url_sqli, timeout=req_timeout, verify=False, headers=headers_sqli, allow_redirects=False)
+                            response_time_sqli = time.time() - start_req_time
+                            # print(f"                [DEBUG Job-{thread_id}] SQLi Status: {response_sqli.status_code} | Time: {response_time_sqli:.2f}s")
+                            
+                            is_vuln, det_method, evid, err_name, cwe, owasp = check_for_sqli(response_sqli.text, response_time_sqli, baseline_response_time, payload)
+                            if is_vuln:
+                                print(f"    [!!! SQLi VULN FOUND Job-{thread_id} !!!] URL: {vuln_url_sqli}, Param: {param_name}, Payload: {payload[:60]}")
+                                finding_data = {
+                                    "vulnerability_type": "SQLi", "vulnerable_url": vuln_url_sqli, "parameter": param_name,
+                                    "payload_source_file": payload_file_key, "payload_used": payload,
+                                    "detection_method": det_method, "evidence": evid,
+                                    "http_status_code": response_sqli.status_code, "error_name": err_name,
+                                    "cwe": cwe, "owasp_category": owasp, "loi": True
+                                }
+                                job_findings.append(finding_data)
 
+                        except requests.exceptions.Timeout:
+                            if is_sqli_time_based_payload(payload):
+                                expected_delay = extract_sqli_sleep_duration(payload)
+                                print(f"    [!!! SQLi TIMEOUT VULN Job-{thread_id} !!!] URL: {vuln_url_sqli}, Param: {param_name}, Payload: {payload[:60]}")
+                                finding_data = {
+                                    "vulnerability_type": "SQLi", "vulnerable_url": vuln_url_sqli, "parameter": param_name,
+                                    "payload_source_file": payload_file_key, "payload_used": payload,
+                                    "detection_method": "Time-based (Request Timeout)",
+                                    "evidence": f"Request timed out after {req_timeout}s. Payload SQLi dự kiến gây trễ khoảng {expected_delay}s.",
+                                    "http_status_code": "N/A (Timeout)", "error_name": SQLI_ERROR_NAME,
+                                    "cwe": SQLI_CWE_ID, "owasp_category": SQLI_OWASP_CATEGORY, "loi": True
+                                }
+                                job_findings.append(finding_data)
+                        except requests.exceptions.RequestException as e_req_sqli:
+                            # print(f"                [WARN Job-{thread_id}] Request Exception (SQLi) for {vuln_url_sqli}: {e_req_sqli}")
+                            pass
+            
+            # --- Quét XSS ---
             if payloads_xss:
+                # print(f"        [DEBUG Job-{thread_id}] Initiating XSS scan for param '{param_name}'")
                 for payload_file_key, xss_payload_list in payloads_xss.items():
+                    # print(f"            [DEBUG Job-{thread_id}] Using XSS payloads from: {payload_file_key}")
                     for payload in xss_payload_list:
-                        # ... (logic gửi request XSS và check_for_xss) ...
-                        # job_findings.append(finding_data)
-                        # print(f"    [+] XSS tìm thấy (Job-{thread_id}): {vuln_url_xss} ...")
-                        pass # Placeholder for actual XSS scan logic copied from previous version
-        
-        # print(f"  [ServiceScanJob-{thread_id}] Hoàn thành: {target_url}, tìm thấy: {len(job_findings)} lỗi.")
-        return job_findings
+                        test_params_xss = original_query_params.copy()
+                        # Với XSS, thường thay thế hoàn toàn giá trị tham số bằng payload
+                        test_params_xss[param_name] = [payload] 
+                        
+                        modified_query_xss = urlencode(test_params_xss, doseq=True)
+                        vuln_url_xss = parsed_url._replace(query=modified_query_xss).geturl()
+                        # print(f"                [DEBUG Job-{thread_id}] XSS Test URL: {vuln_url_xss}")
 
+                        try:
+                            headers_xss = {'User-Agent': f'Mozilla/5.0 VulnScanner/1.1 XSSTest (Job-{thread_id})'}
+                            response_xss = session_for_thread.get(vuln_url_xss, timeout=10, verify=False, headers=headers_xss, allow_redirects=True) 
+                            # print(f"                [DEBUG Job-{thread_id}] XSS Status: {response_xss.status_code}")
+                            
+                            is_vuln, det_method, evid, err_name, cwe, owasp = check_for_xss(response_xss.text, payload)
+                            if is_vuln:
+                                print(f"    [!!! XSS VULN FOUND Job-{thread_id} !!!] URL: {vuln_url_xss}, Param: {param_name}, Payload: {payload[:60]}")
+                                finding_data = {
+                                    "vulnerability_type": "XSS", "vulnerable_url": vuln_url_xss, "parameter": param_name,
+                                    "payload_source_file": payload_file_key, "payload_used": payload,
+                                    "detection_method": det_method, "evidence": evid,
+                                    "http_status_code": response_xss.status_code, "error_name": err_name,
+                                    "cwe": cwe, "owasp_category": owasp, "loi": True
+                                }
+                                job_findings.append(finding_data)
+                        except requests.exceptions.RequestException as e_req_xss:
+                            # print(f"                [WARN Job-{thread_id}] Request Exception (XSS) for {vuln_url_xss}: {e_req_xss}")
+                            pass
+        # print(f"  [ServiceScanJob-{thread_id}] Hoàn thành quét cho {target_url}. Tìm thấy {len(job_findings)} lỗi.")
+        return job_findings 
 
     def scan_multiple_urls(self, urls_to_scan: list, 
                            payloads_sqli: dict, payloads_xss: dict, 
