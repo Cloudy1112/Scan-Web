@@ -96,54 +96,94 @@ class WebScannerService:
         self.num_threads = num_threads
         print(f"[Service Init] WebScannerService initialized with {self.num_threads} threads.")
 
+    # (Giữ nguyên logic của hàm discover_urls_with_params từ phiên bản trước, đảm bảo có self)
     def discover_urls_with_params(self, start_url, session, max_urls_to_check=5, thread_id="Crawler"):
-        # (Giữ nguyên logic của hàm discover_urls_with_params từ phiên bản trước, đảm bảo có self)
-        # ...
-        urls_to_scan = set()
+        # urls_to_scan sẽ lưu các URL đại diện thực sự cần quét
+        representative_urls_to_scan = [] 
+        # unique_url_patterns sẽ lưu các "mẫu URL" đã chuẩn hóa để tránh trùng lặp
+        unique_url_patterns = set()
+        
         queue = deque([start_url])
         crawled_urls = {start_url} 
         base_domain = urlparse(start_url).netloc
-        # print(f"  [{thread_id}] Bắt đầu khám phá URL từ: {start_url}") # Bỏ print này để tool tự quản lý output
+        
+        print(f"  [{thread_id}] Bắt đầu khám phá URL từ: {start_url} (giới hạn {max_urls_to_check} mẫu URL có tham số)")
         crawl_count = 0
-        max_crawl_depth_links = max_urls_to_check * 15 
-        while queue and len(urls_to_scan) < max_urls_to_check and crawl_count < max_crawl_depth_links:
-            current_url = queue.popleft(); crawl_count += 1
+        # Giới hạn số link crawl tổng thể để tránh vòng lặp vô hạn hoặc quá lâu
+        # Có thể tăng tỉ lệ này nếu trang web có nhiều link không tham số ở các cấp đầu
+        max_total_crawled_links = max_urls_to_check * 25 # Ví dụ: cho phép crawl tối đa 25 link cho mỗi URL pattern muốn tìm
+
+        while queue and len(representative_urls_to_scan) < max_urls_to_check and crawl_count < max_total_crawled_links:
+            current_url_to_visit = queue.popleft()
+            crawl_count += 1
+            # print(f"    [DEBUG Crawler {thread_id}] Visiting ({crawl_count}/{max_total_crawled_links}): {current_url_to_visit}")
+            
             try:
                 headers_crawl = {'User-Agent': f'Mozilla/5.0 VulnScanner/1.1 ServiceCrawler (Thread-{thread_id})'}
-                response = session.get(current_url, timeout=7, verify=False, allow_redirects=True, headers=headers_crawl)
+                response = session.get(current_url_to_visit, timeout=7, verify=False, allow_redirects=True, headers=headers_crawl)
                 response.raise_for_status()
-                final_url_parsed = urlparse(response.url)
-                if final_url_parsed.query: 
-                    if response.url not in urls_to_scan: 
-                        urls_to_scan.add(response.url)
-                        # print(f"        [+] Tìm thấy URL có tham số để quét: {response.url} (Tổng: {len(urls_to_scan)})")
-                    if len(urls_to_scan) >= max_urls_to_check: break
+                
+                # Luôn làm việc với URL cuối cùng sau khi có thể đã redirect
+                final_effective_url = response.url
+                final_url_parsed = urlparse(final_effective_url)
+
+                # Bước 1: Chuẩn hóa URL hiện tại (final_effective_url) nếu nó có tham số
+                if final_url_parsed.query:
+                    query_params = parse_qs(final_url_parsed.query)
+                    # Sắp xếp tên tham số để đảm bảo thứ tự không ảnh hưởng đến tính duy nhất
+                    # ví dụ: ?a=1&b=2 giống ?b=2&a=1
+                    param_names_sorted = tuple(sorted(query_params.keys()))
+                    
+                    # Tạo một "mẫu URL" dựa trên path và tên tham số đã sắp xếp
+                    url_pattern = (final_url_parsed.scheme, final_url_parsed.netloc, final_url_parsed.path, param_names_sorted)
+                    
+                    if url_pattern not in unique_url_patterns:
+                        unique_url_patterns.add(url_pattern)
+                        representative_urls_to_scan.append(final_effective_url) # Thêm URL gốc vào danh sách quét
+                        print(f"        [+] Crawler {thread_id}: Thêm mẫu URL mới: {final_url_parsed.path}?{param_names_sorted} (Từ: {final_effective_url}) (Tổng mẫu: {len(unique_url_patterns)})")
+                        if len(representative_urls_to_scan) >= max_urls_to_check:
+                            break # Đã đủ số lượng URL đại diện cần quét
+
+                # Bước 2: Tìm các link mới từ trang hiện tại
                 if 'text/html' in response.headers.get('Content-Type', '').lower():
                     soup = BeautifulSoup(response.content, 'html.parser')
                     for link_tag in soup.find_all('a', href=True):
                         href = link_tag['href']
-                        if not href or href.startswith('#') or href.lower().startswith(('mailto:', 'tel:')): continue
-                        absolute_url = urljoin(response.url, href)
+                        if not href or href.startswith('#') or href.lower().startswith(('mailto:', 'tel:','javascript:')):
+                            continue
+
+                        absolute_url = urljoin(final_effective_url, href) # Dùng final_effective_url làm base
                         parsed_absolute_url = urlparse(absolute_url)
+
                         if (parsed_absolute_url.netloc == base_domain and
                                 parsed_absolute_url.scheme in ['http', 'https'] and
                                 absolute_url not in crawled_urls):
+                            
                             crawled_urls.add(absolute_url)
-                            if parsed_absolute_url.query:
-                                if absolute_url not in urls_to_scan:
-                                    urls_to_scan.add(absolute_url)
-                                    # print(f"        [+] Tìm thấy URL có tham số để quét: {absolute_url} (Tổng: {len(urls_to_scan)})")
-                                if len(urls_to_scan) >= max_urls_to_check: break
-                            if len(crawled_urls) < max_crawl_depth_links : queue.append(absolute_url)
-                    if len(urls_to_scan) >= max_urls_to_check: break
+                            queue.append(absolute_url) # Thêm vào hàng đợi để crawl tiếp, bất kể có param hay không
+
+                            # Nếu link mới này có tham số, cũng chuẩn hóa và kiểm tra
+                            if parsed_absolute_url.query and len(representative_urls_to_scan) < max_urls_to_check:
+                                query_params_link = parse_qs(parsed_absolute_url.query)
+                                param_names_link_sorted = tuple(sorted(query_params_link.keys()))
+                                link_pattern = (parsed_absolute_url.scheme, parsed_absolute_url.netloc, parsed_absolute_url.path, param_names_link_sorted)
+                                
+                                if link_pattern not in unique_url_patterns:
+                                    unique_url_patterns.add(link_pattern)
+                                    representative_urls_to_scan.append(absolute_url)
+                                    print(f"        [+] Crawler {thread_id}: Thêm mẫu URL mới từ link: {parsed_absolute_url.path}?{param_names_link_sorted} (Từ: {absolute_url}) (Tổng mẫu: {len(unique_url_patterns)})")
+                                    if len(representative_urls_to_scan) >= max_urls_to_check:
+                                        break # Đã đủ
+                    if len(representative_urls_to_scan) >= max_urls_to_check:
+                        break
             except requests.exceptions.RequestException: pass
-            except Exception: pass
-        return list(urls_to_scan)
-
-
-        # Đổi tên từ scan_single_url_with_params để rõ ràng đây là job cho luồng
-        # Logic của hàm này giữ nguyên như scan_single_url_with_params trước đó, chỉ thay đổi print
-        # và đảm bảo nó là một phương thức của class (có self)
+            except Exception as e_crawl: 
+                # print(f"    [WARN Crawler {thread_id}] Lỗi khi xử lý {current_url_to_visit}: {e_crawl}")
+                pass # Ít log lỗi hơn
+            
+        print(f"  [{thread_id}] Hoàn thành khám phá. Tìm thấy {len(representative_urls_to_scan)} URL đại diện có tham số.")
+        return representative_urls_to_scan # Trả về danh sách các URL đại diện
+    
     def _scan_single_url_job(self, target_url, payloads_sqli, payloads_xss, session_for_thread, thread_id="N/A"):
         # print(f"  [ServiceScanJob-{thread_id}] Bắt đầu quét: {target_url}")
         parsed_url = urlparse(target_url)

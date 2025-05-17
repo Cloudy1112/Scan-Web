@@ -210,7 +210,7 @@
                 </div>
                 <div class="form-group">
                     <label for="max_crawl_urls">Số URL tối đa để quét khi crawl:</label>
-                    <input type="number" id="max_crawl_urls" name="max_crawl_urls" value="{{ request.form.max_crawl_urls or 100 }}" min="1">
+                    <input type="number" id="max_crawl_urls" name="max_crawl_urls" value="{{ request.form.max_crawl_urls or 5 }}" min="1">
                 </div>
             </div>
 
